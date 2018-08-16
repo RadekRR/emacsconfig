@@ -1,1 +1,999 @@
-../../.emacs
+(require 'package) ;; You might already have this line
+(add-to-list 'package-archives
+	     '("melpa" . "http://melpa.org/packages/") t)
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
+(package-initialize) ;; You might already have this line
+
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+
+(setq custom-file "~/.emacs.d/emacs-custom.el")
+(load custom-file)
+
+(use-package highlight-indent-guides
+  :init
+  (setq highlight-indent-guides-method 'column)
+  :hook  ((vhdl-mode verilog-mode) . highlight-indent-guides-mode))
+
+
+(global-set-key "\C-w" 'backward-kill-word)
+(global-set-key "\C-x\C-k" 'kill-region)
+(global-set-key "\C-c\C-k" 'kill-region)
+(global-set-key "\M-s" 'other-window) ; cursor to other panel
+(add-hook 'dired-mode-hook (lambda () (local-set-key "\M-s" 'other-window)))
+(add-hook 'ibuffer-mode-hook (lambda () (local-set-key "\M-s" 'other-window)))
+(setq confirm-kill-emacs 'y-or-n-p)
+
+(tool-bar-mode 0)
+
+(set-face-attribute 'default nil
+                    :family "Terminus"
+                    :height 110
+                    :weight 'normal
+                    :width 'normal)
+(add-to-list 'default-frame-alist '(font . "Terminus 11"))
+
+
+(use-package rainbow-identifiers
+  :hook
+  (prog-mode . rainbow-identifiers-mode))
+
+;;(add-to-list 'load-path "~/.emacs.d/color-theme-6.6.0/")
+;;(require 'color-theme)
+
+;;(setq load-path (cons (expand-file-name "/home/radek/.emacs.d") load-path))
+
+(setq ediff-window-setup-function 'ediff-setup-windows-plain)
+(setq ediff-split-window-function 'split-window-horizontally)
+
+ (when (fboundp 'winner-mode)
+      (winner-mode 1))
+
+;; Verilog
+(add-to-list 'load-path "~/.emacs.d/verilog/")
+(autoload 'verilog-mode "verilog-mode" "Verilog mode" t )
+(setq verilog-auto-newline nil)
+(setq verilog-auto-lineup nil)
+(setq verilog-indent-lists nil)
+(add-hook 'verilog-mode-hook
+          (lambda ()
+            (highlight-indent-guides-mode t)
+            (linum-mode t)
+            (rainbow-identifiers-mode t)))
+
+
+
+
+;; hide show
+;;(add-hook 'vhdl-mode-hook 'vhdl-hs-minor-mode)
+
+;;(load-library "hideshow")
+;;(global-set-key (kbd "C-=") 'hs-toggle-hiding)
+
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+
+(grep-compute-defaults)
+(grep-apply-setting 'grep-find-command "find . -type f -exec grep -nH  {} \";\"")
+(grep-apply-setting 'grep-find-template "find . <X> -type f <F> -exec grep <C> -nH <R> {} \";\"")
+
+
+(show-paren-mode 1)
+
+(use-package vhdl-mode
+  :config
+  ;; zeby sie wirus nie pultal
+  (defun dzr-vhdl-port-paste-component (&optional no-indent)
+    "Paste as a component declaration. wirus style"
+    (interactive)
+    (vhdl-port-paste-component no-indent)
+    (save-excursion
+      (re-search-backward ");")
+      (newline)
+      (indent-according-to-mode)
+      (re-search-backward ");[ \n\t]+port")
+      (newline)
+      (indent-according-to-mode)))
+
+  (defun dzr-vhdl-port-paste-instance (&optional no-indent)
+    "Paste as a component declaration. wirus style"
+    (interactive)
+    (vhdl-port-paste-instance no-indent)
+    (save-excursion
+      (re-search-backward ");")
+      (newline)
+      (indent-according-to-mode)
+      (re-search-backward ")[ \n\t]+port")
+      (newline)
+      (indent-according-to-mode))
+
+    (defun vhdl2-comment-uncomment-region (beg end &optional arg)
+      "Comment out region if not commented out, uncomment otherwise."
+      (interactive "r\nP")
+      (save-excursion
+	(goto-char (1- end))
+	(end-of-line)
+	(setq end (point-marker))
+	(goto-char beg)
+	(beginning-of-line)
+	(setq beg (point))
+	(if (looking-at (concat "\\s-*" comment-start))
+	    (comment-region beg end '(4))
+	  (comment-region beg end)))))
+
+  (defun vhdl2-comment-uncomment-line (&optional arg)
+    "Comment out line if not commented out, uncomment otherwise."
+    (interactive "p")
+    (save-excursion
+      (beginning-of-line)
+      (let ((position (point)))
+	(forward-line (or arg 1))
+	(vhdl2-comment-uncomment-region position (point)))))
+
+  (define-key vhdl-mode-map "\C-c\C-p\C-c" 'dzr-vhdl-port-paste-component)
+
+  (define-key vhdl-mode-map "\C-c\C-p\C-i" 'dzr-vhdl-port-paste-instance)
+
+  (setq vhdl-prompt-for-comments nil)
+  (setq vhdl-self-insert-comments nil)
+
+  ;; disable vhdl regexp
+  (setq compilation-mode-hook nil)
+  
+  (add-hook 'vhdl-mode-hook 'my-vhdl-key-hook)
+  (defun my-vhdl-key-hook ()
+    (define-key vhdl-mode-map (kbd "S-SPC") (lambda () (interactive) (insert "_"))))
+
+  ;;(remove-hook 'vhdl-mode-hook 'my-vhdl-key-hook))
+  )
+
+
+(setq preview-image-type 'pnm)
+
+;;(setq ispell-program-name "d:\\soft\\aspell\\bin\\aspell.exe")
+
+(use-package ispell
+  :config
+  (add-to-list 'ispell-dictionary-alist '("de_DE"
+                                          "[[:alpha:]]"
+                                          "[^[:alpha:]]"
+                                          "[']"
+                                          t
+                                          ("-d" "de_DE"); Dictionary file name
+                                          nil
+                                          iso-8859-1))
+
+  (add-to-list 'ispell-dictionary-alist '("en_US"
+                                          "[[:alpha:]]"
+                                          "[^[:alpha:]]"
+                                          "[']"
+                                          t
+                                          ("-d" "en_US")
+                                          nil
+                                          iso-8859-1))
+
+  (add-to-list 'ispell-dictionary-alist '("pl_PL"
+                                          "[[:alpha:]]"
+                                          "[^[:alpha:]]"
+                                          "[']"
+                                          t
+                                          ("-d" "pl_PL")
+                                          nil
+                                          iso-8859-2))
+
+  ;;(setq ispell-program-name "hunspell")          ; Use hunspell to correct mistakes
+  ;;(setq ispell-dictionary "en_US")\
+  ;;(setq ispell-local-dictionary nil)
+  (setq ispell-program-name "aspell"))
+
+(use-package flyspell
+  :init
+  (add-hook 'flyspell-mode-hook
+	    (lambda () (define-key flyspell-mode-map (kbd "C-.") nil)))
+  (add-hook 'flyspell-mode-hook
+	    (lambda () (define-key flyspell-mode-map (kbd "C-;") nil)))
+
+
+  (add-hook 'flyspell-mode-hook (lambda () (local-set-key (kbd "C-.") 'flyspell-goto-next-error)))
+  (add-hook 'flyspell-mode-hook (lambda () (local-set-key (kbd "C-;") 'helm-flyspell-correct))))
+
+(use-package ace-jump-mode
+  :init
+  (define-key global-map (kbd "C-c c") 'ace-jump-mode)
+  (define-key global-map (kbd "C-c C-c") 'ace-jump-mode)
+  (define-key global-map (kbd "M-j") 'ace-jump-mode))
+
+;;(add-hook 'tex-mode-hook 'helm-gtags-mode)
+
+;; VHDL
+;; (add-to-list
+;;  'color-identifiers:modes-alist
+;;  `(vhdl-mode . ("[^.][[:space:]]*"
+;;                  "\\_<\\([[:lower:]]\\([_]??[[:lower:][:upper:]\\$0-9]+\\)*\\(_+[#:<=>@!%&*+/?\\\\^|~-]+\\|_\\)?\\)"
+;;                  (nil scala-font-lock:var-face font-lock-variable-name-face))))
+
+;; ;; verilog
+;; (add-to-list
+;;  'color-identifiers:modes-alist
+;;  `(verilog-mode . ("[^.][[:space:]]*"
+;;                  "\\_<\\([[:lower:]]\\([_]??[[:lower:][:upper:]\\$0-9]+\\)*\\(_+[#:<=>@!%&*+/?\\\\^|~-]+\\|_\\)?\\)"
+;;                  (nil scala-font-lock:var-face font-lock-variable-name-face))))
+
+
+(use-package helm-mode
+  :ensure helm
+  :config
+  ;; The default "C-x c" is quite close to "C-x C-c", which quits Emacs.
+  ;; Changed to "C-c h". Note: We must set "C-c h" globally, because we
+  ;; cannot change `helm-command-prefix-key' once `helm-config' is loaded.
+  (global-set-key (kbd "C-c h") 'helm-command-prefix)
+  (global-unset-key (kbd "C-x c"))
+  ;;(global-unset-key (kbd "M-h"))
+  (define-key helm-map (kbd "<tab>") 'helm-execute-persistent-action) ; rebind tab to run persistent action
+  (define-key helm-map (kbd "C-i") 'helm-execute-persistent-action) ; make TAB works in terminal
+  (define-key helm-map (kbd "C-z")  'helm-select-action) ; list actions using C-z
+
+					;(global-set-key (kbd "C-x b") 'helm-mini)
+  (setq helm-buffer-max-length nil)
+  (setq helm-always-two-windows t)
+  (setq helm-split-window-default-side 'below)
+
+  (setq helm-split-window-in-side-p nil)
+
+  ;;(helm-mode 0)
+
+  (global-set-key "\C-x\C-b" 'helm-buffers-list)
+  (local-set-key "\C-x\C-b" 'helm-buffers-list)
+					;(global-set-key (kbd "M-x") 'helm-M-x)
+					;(global-set-key (kbd "C-x C-f") 'helm-find-files)
+
+  ;;
+  ;; (add-hook 'vhdl-mode-hook 'helm-gtags-mode)
+  ;; (global-set-key (kbd "M-.") 'helm-gtags-dwim)
+  ;; (global-set-key (kbd "C-x M-.") 'helm-gtags-pop-stack)
+  ;; (setq helm-gtags-cygwin-use-global-w32-port nil)
+
+  ;;(add-hook 'vhdl-mode-hook 'helm-gtags-mode)
+  ;;(global-set-key (kbd "C-x M-.") 'helm-gtags-pop-stack)
+  ;;(setq helm-gtags-cygwin-use-global-w32-port nil)
+
+
+  (setq helm-ff-fuzzy-matching nil) ;; dont know why this works opposite
+
+  ;;
+  
+
+
+
+  (add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "M-h o") 'helm-occur)))
+  (add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "M-h y") 'helm-show-kill-ring)))
+  (add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "M-h SPC") 'helm-mark-ring)))
+
+  (add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "C-c C-c") 'ace-jump-mode)))
+  (add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "C-c ;") 'vhdl-comment-uncomment-region)))
+  (add-hook 'prog-mode-hook 'company-mode)
+  (add-hook 'prog-mode-hook 'linum-mode)
+  (add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "M-h p") 'helm-projectile)))
+
+  (add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "M-h o") 'helm-occur)))
+  (add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "M-h y") 'helm-show-kill-ring)))
+  (add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "M-h SPC") 'helm-mark-ring)))
+
+  (add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "C-c C-c") 'ace-jump-mode)))
+  (add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "C-c ;") 'vhdl-comment-uncomment-region)))
+  (add-hook 'vhdl-mode-hook 'company-mode)
+  (add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "M-h p") 'helm-projectile)))
+
+
+  (add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "M-h b") 'helm-bibtex)))
+  (add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "M-h o") 'helm-occur)))
+  (add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "M-h y") 'helm-show-kill-ring)))
+  (add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "M-h SPC") 'helm-mark-ring)))
+
+  (add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "C-c ;") 'vhdl-comment-uncomment-region)))
+  (add-hook 'LaTeX-mode-hook 'turn-on-reftex)   ; with AUCTeX LaTeX mode
+					;(add-hook 'LaTeX-mode-hook (lambda () (TeX-source-correlate-mode 1)))
+					;(setq TeX-source-correlate-method 'synctex)
+
+  (add-hook 'LaTeX-mode-hook 'company-mode)
+  (add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "M-h p") 'helm-projectile)))
+
+  (setq helm-bibtex-pdf-open-function
+	(lambda (fpath)
+	  (call-process "c:/Program Files/SumatraPDF/SumatraPDF.exe" nil 0 nil fpath)))
+  (setq helm-bibtex-bibliography "/cygdrive/d/desy/dok/rozprawa/literatura/rozprawa.bib")
+  (setq helm-bibtex-pdf-field "File")
+
+  (setq helm-bibtex-library-path "literatura; literatura/cw xfel intro; literatura/xfel; literatura/zrodlamocy"))
+;; end of helm
+
+(use-package multiple-cursors
+  :init
+  (global-set-key (kbd "C-S-c C-S-c") 'mc/edit-lines)
+  (global-set-key (kbd "C->") 'mc/mark-next-like-this)
+  (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+  ;;(global-set-key (kbd "M-C->") 'mc/skip-to-next-like-this)
+  ;;(global-set-key (kbd "M-C-<") 'mc/skip-to-previous-like-this)
+  (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this))
+
+
+(add-to-list 'load-path "~/.emacs.d/pierdoly/")
+;; UCF mode
+(autoload 'ucf-mode "ucf-mode" "Xilinx UCF mode" t)
+(add-to-list 'auto-mode-alist '("\\.ucf\\'" . ucf-mode))
+
+;; expand region
+(use-package expand-region
+  :init
+  (global-set-key (kbd "C-=") 'er/expand-region))
+
+(use-package powerline
+  :init
+  (powerline-default-theme))
+
+(use-package company)
+(use-package projectile)
+(use-package challenger-deep-theme
+  :init
+  (load-theme 'challenger-deep))
+;; (use-package spacemacs-theme
+;;   :init
+;;   (load-theme 'spacemacs-dark))
+
+;;(load-theme 'default-black)
+;;(load-theme 'arjen-rr)
+;;(load-theme 'deeper-blue)
+;;(require 'spaceline-config)
+;;(spaceline-emacs-theme)
+;;(require 'powerline)
+;;(powerline-center-theme)
+
+;; (set-default-font "DejaVu Sans Mono-9")
+;; (set-frame-font "DejaVu Sans Mono-10") 
+;; (set-default-font "Terminus 10")
+;; (set-frame-font "Terminus 11")
+;; (set-default-font "Liberation Mono-9")
+;; (set-frame-font "Liberation Mono-10")
+(set-default-font "Fixed-11") 
+;; (setq magit-git-executable "c:/cygwin64/bin/git.exe")
+
+(setq exec-path (append exec-path '("c:/cygwin64/bin/")))
+
+(setq TeX-source-correlate-mode t)
+(setq TeX-source-correlate-method 'synctex)
+(setq TeX-view-program-list 
+  '(("Sumatra PDF" ("\"C:/Program Files/SumatraPDF/SumatraPDF.exe\" -reuse-instance" 
+                      (mode-io-correlate " -forward-search %b %n ") " %o"))))
+(setq TeX-view-program-selection  
+      '(((output-dvi style-pstricks) "dvips and start") (output-dvi "Yap") 
+       (output-pdf "Sumatra PDF") (output-html "start")))
+
+;; helm swoop
+(use-package helm-swoop
+  :init
+  ;; Match only for symbol
+  (setq helm-swoop-pre-input-function
+	(lambda () (if (thing-at-point 'symbol) (format "\\_<%s\\_> " (thing-at-point 'symbol)) "")))
+
+
+  ;; Change the keybinds to whatever you like :)
+  (global-set-key (kbd "M-i") 'helm-swoop)
+  (global-set-key (kbd "M-I") 'helm-swoop-back-to-last-point)
+  (global-set-key (kbd "C-c M-i") 'helm-multi-swoop)
+  (global-set-key (kbd "C-x M-i") 'helm-multi-swoop-all))
+     
+
+
+;; origami
+;; (require 'origami)
+;; (let ((map origami-mode-map)) 
+;;   (define-key map (kbd "M-<left>") 'origami-close-node)
+;;   (define-key map (kbd "M-<right>") 'origami-open-node)
+;;   (define-key map (kbd "M-<up>") 'origami-backward-fold-same-level)
+;;   (define-key map (kbd "M-<down>") 'origami-forward-fold-same-level))
+
+(use-package yafolding
+  :hook ((prog-mode) . yafolding-mode))
+  
+
+
+(defun the-the ()
+  "Search forward for for a duplicated word."
+  (interactive)
+  (message "Searching for for duplicated words ...")
+  (push-mark)
+  ;; This regexp is not perfect
+  ;; but is fairly good over all:
+  (if (re-search-forward
+       "\\b\\([^@ \n\t]+\\)[ \n\t]+\\1\\b" nil 'move)
+      (message "Found duplicated word.")
+    (message "End of buffer")))
+
+
+;;(setq tramp-default-method "ssh")
+
+
+;; (add-hook 'vhdl-mode-hook 'my-vhdl-key-hook)
+
+;; (defun my-vhdl-key-hook ()
+;;   (define-key vhdl-mode-map (kbd "-") (lambda () (interactive) (insert "_")))
+;;   (define-key vhdl-mode-map (kbd "_") (lambda () (interactive) (insert "-")))
+;;   )
+
+
+
+;; (defun my-vhdl-space ()
+;;  ;; "bleee"
+;;  ;;(interactive)
+;;   (let ((wor (thing-at-point 'word))
+;; 	(endp (point)))
+;;     (if wor
+;; 	(save-excursion
+;; 	  (backward-word)
+;; 	  (let ((begp (point)))
+;; 	    (if (re-search-forward "\\(\\<sig_\\)\\|\\(\\<p_\\)\\|\\(\\<r_\\)\\|\\(\\<g_\\)" endp t)
+;; 		(upcase-region begp endp)))))))
+
+
+;; (define-key vhdl-mode-map (kbd "<SPC>") (lambda () (interactive) (my-vhdl-space) (vhdl-electric-space 1)))
+
+;; (define-key vhdl-mode-map (kbd ";") (lambda () (interactive) (my-vhdl-space) (vhdl-electric-semicolon 1)))
+;; (define-key vhdl-mode-map (kbd "-") (lambda () (interactive) (insert "_")))
+;; (define-key vhdl-mode-map (kbd "_") (lambda () (interactive) (my-vhdl-space) (insert "-")))
+;; (define-key vhdl-mode-map (kbd "<return>") (lambda () (interactive) (my-vhdl-space) (vhdl-electric-return)))
+;; (define-key vhdl-mode-map (kbd ".") (lambda () (interactive) (my-vhdl-space) (vhdl-electric-period 1)))
+;; (define-key vhdl-mode-map (kbd ",") (lambda () (interactive) (my-vhdl-space) (vhdl-electric-comma 1)))
+;; (define-key vhdl-mode-map (kbd "(") (lambda () (interactive) (my-vhdl-space) (insert "(")))
+;; (define-key vhdl-mode-map (kbd "[") (lambda () (interactive) (my-vhdl-space) (vhdl-electric-open-bracket 1)))
+
+
+
+
+(defalias 'yes-or-no-p 'y-or-n-p)
+
+;; (custom-set-faces
+;;  ;; custom-set-faces was added by Custom.
+;;  ;; If you edit it by hand, you could mess it up, so be careful.
+;;  ;; Your init file should contain only one such instance.
+;;  ;; If there is more than one, they won't work right.
+;;  '(hl-line ((t (:background "gray10"))))
+;;  '(mode-line ((t (:foreground "#030303" :background "#bdbdbd" :box nil))))
+;;  '(mode-line-inactive ((t (:foreground "#f9f9f9" :background "#666666" :box nil)))))
+
+
+;; add multiple cursors via ace
+(global-set-key (kbd "C-)") 'ace-mc-add-multiple-cursors)
+
+(require 'compile)
+(add-to-list 'compilation-error-regexp-alist-alist
+ 	     '(xst2 "^ERROR:HDLCompiler:[0-9]+ - \"\\(.+\\)\" Line \\([0-9]+\\)." 1 2 0))
+
+(add-to-list 'compilation-error-regexp-alist
+ 	     'xst2)
+
+
+
+
+
+
+;;modified version of the helm-etags
+(defun helm-etags-select-rr (reinit)
+  "Preconfigured helm for etags.
+If called with a prefix argument REINIT
+or if any of the tag files have been modified, reinitialize cache.
+
+This function aggregates three sources of tag files:
+
+  1) An automatically located file in the parent directories,
+     by `helm-etags-get-tag-file'.
+  2) `tags-file-name', which is commonly set by `find-tag' command.
+  3) `tags-table-list' which is commonly set by `visit-tags-table' command."
+  (interactive "P")
+  (let ((tag-files (helm-etags-all-tag-files))
+        (helm-execute-action-at-once-if-one
+         helm-etags-execute-action-at-once-if-one)
+        (str (if (region-active-p)
+                 (buffer-substring-no-properties
+                  (region-beginning) (region-end))
+                 ;; Use a raw syntax-table to determine tap.
+                 ;; This may be wrong when calling etags
+                 ;; with hff from a buffer that use
+                 ;; a different syntax, but most of the time it
+                 ;; should be better.
+                 (with-syntax-table (standard-syntax-table)
+                   (thing-at-point 'symbol)))))
+    (if (cl-notany 'file-exists-p tag-files)
+        (message "Error: No tag file found.\
+Create with etags shell command, or visit with `find-tag' or `visit-tags-table'.")
+        (cl-loop for k being the hash-keys of helm-etags-cache
+                 unless (member k tag-files)
+                 do (remhash k helm-etags-cache))
+        (mapc (lambda (f)
+                (when (or (equal reinit '(4))
+                          (and helm-etags-mtime-alist
+                               (helm-etags-file-modified-p f)))
+                  (remhash f helm-etags-cache)))
+              tag-files)
+        (unless helm-source-etags-select
+          (setq helm-source-etags-select
+                (helm-etags-build-source)))
+        (helm :sources 'helm-source-etags-select
+              :keymap helm-etags-map
+              ;;:input (concat "\\_<" str "\\_> ") ;; this is my modification
+              :input (if str (concat "\\_<" str "\\_> ") nil);; this is my modification
+              :default (if helm-etags-fuzzy-match
+                           str
+                         (list (concat "\\_<" str "\\_>") str))
+              :buffer "*helm etags*"))))
+
+;;(global-set-key (kbd "M-.") 'helm-etags-select-rr) ;; use my version of the code
+
+;; (eval-after-load 'company
+;;   '(progn
+;;      (define-key company-mode-map (kbd "C-s") 'helm-company)
+;;      (define-key company-active-map (kbd "C-s") 'helm-company)))
+
+
+
+
+;;;;;;;;;;;counsel-etags
+(use-package ivy
+  :init
+  (ivy-mode 1))
+
+;; ta funkcja jest niepotrzena
+(defun ivy-partial-or-call ()
+  "Complete the minibuffer text as much as possible.
+If the text hasn't changed as a result, forward to `ivy-call'."
+  (interactive)
+  (if (and (eq (ivy-state-collection ivy-last) #'read-file-name-internal)
+           (or (and (equal ivy--directory "/")
+                    (string-match "\\`[^/]+:.*\\'" ivy-text))
+               (string-match "\\`/" ivy-text)))
+      (let ((default-directory ivy--directory)
+            dir)
+        (minibuffer-complete)
+        (setq ivy-text (ivy--input))
+        (when (setq dir (ivy-expand-file-if-directory ivy-text))
+          (ivy--cd dir)))
+    (or (ivy-partial)
+        (when (or (eq this-command last-command)
+                  (eq ivy--length 1))
+          (ivy-call)))))
+
+;(define-key ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-call)
+;(define-key ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-done)
+
+
+(defun counsel-etags-open-cand (cands time)
+  "Open CANDS.  Start open tags file at TIME."
+  ;; mark current point for `pop-tag-mark'
+  (let (v-last-mark point-marker)
+    (cond
+     ((= 1 (length cands))
+      ;; open the file directly
+      (when (fboundp 'xref-push-marker-stack)
+        (xref-push-marker-stack v-last-mark))
+      (counsel-etags-open-file (car cands)))
+     (t
+      (ivy-read (format  "Find Tag (%.01f seconds): "
+                         (float-time (time-since time)))
+                cands
+                :action #'counsel-etags-open-file
+                :caller 'counsel-etags-find-tag)
+      (when (fboundp 'xref-push-marker-stack)
+        (xref-push-marker-stack v-last-mark))))))
+
+
+(defun counsel-etags-grep (&optional default-keyword hint)
+  "Grep at project root directory or current directory.
+Try to find best grep program (ripgrep, grep...) automatically.
+Extended regex like (pattern1|pattern2) is used.
+If DEFAULT-KEYWORD is not nil, it's used as grep keyword.
+If HINT is not nil, it's used as grep hint."
+  (interactive)
+  (let* ((v-last-mark (point-marker))
+         (keyword (if default-keyword default-keyword
+                    (counsel-etags-read-keyword "Enter grep pattern: ")))
+         (default-directory (counsel-etags-locate-project))
+         (time (current-time))
+         (cands (split-string (shell-command-to-string (counsel-etags-grep-cli keyword nil)) "[\r\n]+" t))
+         (dir-summary (file-name-as-directory (file-name-base (directory-file-name (counsel-etags-locate-project))))))
+
+    (setq counsel-etags-opts-cache (plist-put counsel-etags-opts-cache :ignore-dirs counsel-etags-ignore-directories))
+    (setq counsel-etags-opts-cache (plist-put counsel-etags-opts-cache :ignore-file-names counsel-etags-ignore-filenames))
+
+    ;; Slow down grep 10 times
+    (ivy-read (concat hint (format "Grep \"%s\" at %s (%.01f seconds): "
+                                   keyword
+                                   dir-summary
+                                   (float-time (time-since time))))
+              cands
+              :history 'counsel-git-grep-history ; share history with counsel
+              :action `(lambda (line)
+                         (let* ((lst (split-string line ":"))
+                                (file (concat (counsel-etags-locate-project) (car lst)))
+                                (linenum (string-to-number (cadr lst))))
+                           (counsel-etags-open-file-api file linenum)))
+              :caller 'counsel-etags-grep)
+    (when (fboundp 'xref-push-marker-stack)
+      (xref-push-marker-stack v-last-mark))))
+
+(setq counsel-etags-ignore-directories '(".git" ".svn" ".cvs" ".bzr" ".hg" "bin" "fonts" "images" ".DS_Store" ".npm" ".tmp" ".sass-cache" ".idea*" "node_modules" "bower_components" ".tox" ".cask" "projects"))
+
+(setq counsel-etags-ignore-filenames '("*.json" "*.log" "tags" "TAGS" "*.gz" "*.zip" "*.tar" "*.rar" "GTAGS" "GPATH" "GRTAGS" "cscope.files" "*bundle.js" "*min.js" "*min.css" "*.png" "*.jpg" "*.jpeg" "*.gif" "*.bmp" "*.tiff" "*.ico" "*.doc" "*.docx" "*.xls" "*.ppt" "*.pdf" "*.odt" "*.obj" "*.o" "*.a" "*.dylib" "*.lib" "*.d" "*.dll" "*.exe" ".metadata*" "*.class" "*.war" "*.jar" "*flymake" "*#*#" "*.#*" "*.swp" "*~" "*.elc" "*.pyc"))
+
+(global-set-key (kbd "M-.") 'counsel-etags-find-tag-at-point)
+
+
+(defun counsuel-imenu-rr ()
+  "jump to imenu rr version"
+  (interactive)
+  (let* ((v-last-mark (point-marker)))
+
+    (condition-case nil (counsel-imenu)
+      (quit
+          (goto-char v-last-mark)))))         
+
+(add-hook 'LaTeX-mode-hook (lambda () (local-set-key (kbd "M-h i") 'counsuel-imenu-rr)))
+(add-hook 'prog-mode-hook (lambda () (local-set-key (kbd "M-h i") 'counsuel-imenu-rr)))
+(add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "M-h i") 'counsuel-imenu-rr)))
+
+;;(global-set-key (kbd "C-x C-f") 'counsel-find-file)
+;;(global-set-key (kbd "C-x b") 'ivy-switch-buffer)
+;;(global-set-key (kbd "M-x") 'counsel-M-x)
+;;  (save-excursion
+;;    (counsel-imenu)))
+
+
+
+(use-package hydra)
+
+(defhydra hydra-yank-pop ()
+  "yank"
+  ("C-y" yank nil)
+  ("M-y" yank-pop nil)
+  ("y" (yank-pop 1) "next")
+  ("Y" (yank-pop -1) "prev")
+  ("l" helm-show-kill-ring "list" :color blue))   ; or browse-kill-ring
+;; (global-set-key (kbd "M-y") #'hydra-yank-pop/yank-pop)
+;; (global-set-key (kbd "C-y") #'hydra-yank-pop/yank)
+
+(add-hook 'vhdl-mode-hook (lambda () (yas-minor-mode)))
+
+;;(require 'projectile
+;;	 (define-key projectile-mode-map projectile-keymap-prefix nil))
+;;(define-key projectile-mode-map (kbd "C-c C-p") #'projectile-command-map)
+
+(setq projectile-enable-caching t)
+(setq projectile-completion-system 'ivy)
+(projectile-global-mode)
+
+
+
+
+
+
+;; (defhydra hydra-mark-pop ()
+;;   "mark"
+;;   ("SPC" (set-mark-command 1))
+
+;; (global-set-key (kbd "C-u C-SPC") #'hydra-mark-pop/set-mark-command)
+
+
+
+
+
+;;; restore window layout after ediff
+(defvar my-ediff-last-windows nil)
+
+(defun my-store-pre-ediff-winconfig ()
+  (setq my-ediff-last-windows (current-window-configuration)))
+
+(defun my-restore-pre-ediff-winconfig ()
+  (set-window-configuration my-ediff-last-windows))
+
+(add-hook 'ediff-before-setup-hook #'my-store-pre-ediff-winconfig)
+(add-hook 'ediff-quit-hook #'my-restore-pre-ediff-winconfig)
+
+(global-set-key (kbd "M-?") 'hippie-expand)
+
+(setq ivy-re-builders-alist
+	;; allow input not in order
+      '((t   . ivy--regex-ignore-order)))
+
+
+;; this will run projectile after changing projectile project
+(setq projectile-switch-project-action 'counsel-projectile)
+
+
+
+(defhydra hydra-smerge
+  (:color red :hint nil
+          :pre (smerge-mode 1))
+  "
+^Move^ ^Keep^ ^Diff^ ^Pair^
+------------------------------------------------------
+_n_ext _b_ase _R_efine _<_: base-mine
+_p_rev _m_ine _E_diff _=_: mine-other
+^ ^ _o_ther _C_ombine _>_: base-other
+^ ^ _a_ll _r_esolve
+_q_uit _RET_: current
+"
+  ("RET" smerge-keep-current)
+  ("C" smerge-combine-with-next)
+  ("E" smerge-ediff)
+  ("R" smerge-refine)
+  ("a" smerge-keep-all)
+  ("b" smerge-keep-base)
+  ("m" smerge-keep-mine)
+  ("n" smerge-next)
+  ("o" smerge-keep-other)
+  ("p" smerge-prev)
+  ("r" smerge-resolve)
+  ("<" smerge-diff-base-mine)
+  ("=" smerge-diff-mine-other)
+  (">" smerge-diff-base-other)
+  ("q" nil :color blue))
+
+
+
+(defhydra cqql-multiple-cursors-hydra (:hint nil)
+  "
+     ^Up^            ^Down^        ^Miscellaneous^
+----------------------------------------------
+[_p_]   Next    [_n_]   Next    [_l_] Edit lines
+[_P_]   Skip    [_N_]   Skip    [_a_] Mark all
+[_M-p_] Unmark  [_M-n_] Unmark  [_q_] Quit"
+  ("l" mc/edit-lines :exit t)
+  ("a" mc/mark-all-like-this :exit t)
+  ("n" mc/mark-next-like-this)
+  ("N" mc/skip-to-next-like-this)
+  ("M-n" mc/unmark-next-like-this)
+  ("p" mc/mark-previous-like-this)
+  ("P" mc/skip-to-previous-like-this)
+  ("M-p" mc/unmark-previous-like-this)
+  ("q" nil))
+
+
+;; (setq helm-display-function 'pop-to-buffer) ; make helm play nice
+;; (setq shackle-rules '((compilation-mode :noselect t))
+;;       shackle-default-rule '(:select t))
+
+
+;; very important, this changes the annoying compile/grep behaviour
+(setq split-width-threshold nil)
+
+
+(global-hl-line-mode)
+(global-set-key (kbd "C-x C-r") 'ivy-resume)
+
+
+(global-set-key (kbd "C->") 'cqql-multiple-cursors-hydra/mc/mark-next-like-this)
+
+;; (defun rr-yank (&optional ARG)
+;;   "indent after yanking"
+;;   (interactive "P")
+  
+;;   (yank ARG)
+;;   (and (not current-prefix-arg)
+;;        (member major-mode '(emacs-lisp-mode lisp-mode
+;;                                             clojure-mode    scheme-mode
+;;                                             haskell-mode    ruby-mode
+;;                                             rspec-mode      python-mode
+;;                                             c-mode          c++-mode
+;;                                             objc-mode       latex-mode
+;;                                             plain-tex-mode  vhdl-mode
+;;                                             verilog-mode))
+;;        (let ((mark-even-if-inactive transient-mark-mode))
+;;          (indent-region (region-beginning) (region-end) nil))))
+
+;; (defun rr-yank-pop (&optional ARG)
+;;   "indent after yanking"
+;;   (interactive "P")
+  
+;;   (yank-pop ARG)
+;;   (and (not current-prefix-arg)
+;;        (member major-mode '(emacs-lisp-mode lisp-mode
+;;                                             clojure-mode    scheme-mode
+;;                                             haskell-mode    ruby-mode
+;;                                             rspec-mode      python-mode
+;;                                             c-mode          c++-mode
+;;                                             objc-mode       latex-mode
+;;                                             plain-tex-mode  vhdl-mode
+;;                                             verilog-mode))
+;;        (let ((mark-even-if-inactive transient-mark-mode))
+;;          (indent-region (region-beginning) (region-end) nil))))
+
+(global-set-key (kbd "C-y") 'yank)
+(global-set-key (kbd "M-y") 'yank-pop)
+
+
+
+(dolist (command '(yank yank-pop))
+   (eval `(defadvice ,command (after indent-region activate)
+            (and (not current-prefix-arg)
+                 (member major-mode '(emacs-lisp-mode lisp-mode
+                                                      clojure-mode    scheme-mode
+                                                      haskell-mode    ruby-mode
+                                                      rspec-mode      python-mode
+                                                      c-mode          c++-mode
+                                                      objc-mode       latex-mode
+                                                      plain-tex-mode  vhdl-mode
+                                                      verilog-mode))
+                 (let ((mark-even-if-inactive transient-mark-mode))
+                   (indent-region (region-beginning) (region-end) nil)
+		   )))))
+
+;;(require 'god-mode)
+;;(global-set-key (kbd "<escape>") 'god-mode-all)
+;;(define-key god-local-mode-map (kbd "i") 'god-mode-all)
+;;(define-key god-local-mode-map (kbd "z") 'repeat)
+
+
+(defun rr-swiper ()
+  "run swiper with initial input at point"
+  (interactive)
+  (let
+      ((sym (if (thing-at-point 'symbol)
+                (format "\\_<%s\\_> " (thing-at-point 'symbol)) nil)))
+    (if sym
+        (swiper sym)
+      (swiper))))
+
+
+(defun rr-kill-active-region-or-backword (x)
+  "when region is active then kill, when not then kill backward"
+  "universal argument say how many words repeat"
+  (interactive "p")
+  (if (use-region-p)
+      (kill-region 1 1 1)
+    (if x (backward-kill-word x)
+      (backward-kill-word 1))))
+
+(defun rr-kill-active-region-or-forward (x)
+  "when region is active then kill, when not then kill forward"
+  "universal argument say how many words repeat"
+  (interactive "p")
+  (if (use-region-p)
+      (kill-region 1 1 1)
+    (if x (kill-word x)
+      (kill-word 1))))
+
+;; anki helpers
+
+(use-package google-translate)
+
+(require 'rr-anki "~/.emacs.d/ankitools/rr-anki.el")
+(require 'ox-anki "~/.emacs.d/ankitools/ox-anki.el")
+
+
+(use-package modalka
+  :config
+  (setq-default cursor-type '(bar . 1))
+  (setq modalka-cursor-type 'box)
+
+  (global-set-key (kbd "<escape>") (lambda () (interactive) (modalka-mode 1)))
+  (global-set-key (kbd "<insert>") (lambda () (interactive) (modalka-mode 0)))
+  (define-key modalka-mode-map (kbd "i") (lambda () (interactive) (modalka-mode 0)))
+  (add-hook 'text-mode-hook #'modalka-mode)
+  (add-hook 'prog-mode-hook #'modalka-mode)
+
+  (modalka-define-kbd "=" "C-=")
+  (modalka-define-kbd "a" "C-a")
+  (modalka-define-kbd "b" "M-b")
+  (define-key  modalka-mode-map (kbd "d") 'rr-kill-active-region-or-forward)
+  ;;(modalka-define-kbd "d" "M-d")
+  (modalka-define-kbd "e" "C-e")
+  (modalka-define-kbd "f" "M-f")
+  (modalka-define-kbd "g" "C-g")
+  (modalka-define-kbd "h" "C-b")
+  (modalka-define-kbd "j" "C-n")
+  (modalka-define-kbd "k" "C-p")
+  (modalka-define-kbd "l" "C-f")
+  (modalka-define-kbd "n" "C-n")
+  (modalka-define-kbd "p" "C-p")
+  (modalka-define-kbd "s" "C-s")
+  (modalka-define-kbd "u" "C-/")
+  (modalka-define-kbd "v" "C-v")
+  (define-key  modalka-mode-map (kbd "w") 'rr-kill-active-region-or-backword)
+  ;;(modalka-define-kbd "w" "C-x C-k")
+  (modalka-define-kbd "y" "C-y")
+  (modalka-define-kbd "V" "M-v")
+  (modalka-define-kbd "W" "M-w")
+  (modalka-define-kbd "Y" "M-y")
+  (define-key modalka-mode-map (kbd "SPC") 'set-mark-command)
+  (define-key modalka-mode-map (kbd "S-SPC") (lambda () (interactive) (set-mark-command -1)))
+  (modalka-define-kbd "A" "M-a")
+  (modalka-define-kbd "B" "M-b")
+  (modalka-define-kbd "F" "M-f")
+  (modalka-define-kbd "E" "M-e")
+
+
+  (modalka-define-kbd "r i" "M-h i")
+  (define-key modalka-mode-map (kbd "r r") 'rr-swiper)
+  (define-key modalka-mode-map (kbd "r t") 'ivy-resume)
+  (define-key modalka-mode-map (kbd "r p") 'counsel-projectile-switch-project)
+  (define-key modalka-mode-map (kbd "r f") 'counsel-projectile)
+  (define-key modalka-mode-map (kbd "r m") 'counsel-mark-ring)
+
+
+  (modalka-define-key (kbd "c ;") (kbd "C-c ;"))
+  (modalka-define-key (kbd "c c") (kbd "C-c C-c"))
+  (modalka-define-key (kbd "c p") (kbd "C-c p"))
+  (modalka-define-key (kbd "x r") (kbd "C-x r"))
+  (modalka-define-key (kbd "x s") (kbd "C-x C-s"))
+  (modalka-define-key (kbd "x f") (kbd "C-x C-f"))
+  (define-key  modalka-mode-map (kbd "x k") 'kill-current-buffer)
+  (modalka-define-key (kbd "x b") (kbd "C-x b"))
+  (modalka-define-key (kbd "x e") (kbd "C-x C-e"))
+  (modalka-define-key (kbd "x x") (kbd "M-x"))
+  (define-key modalka-mode-map (kbd "x ,") 'previous-buffer)
+  (define-key modalka-mode-map (kbd "x .") 'next-buffer)
+
+  (modalka-define-kbd "x 0" "C-x 0")
+  (modalka-define-kbd "x 1" "C-x 1")
+  (modalka-define-kbd "x 2" "C-x 2")
+  (modalka-define-kbd "x 3" "C-x 3")
+
+  (modalka-define-kbd "0" "C-0")
+  (modalka-define-kbd "1" "C-1")
+  (modalka-define-kbd "2" "C-2")
+  (modalka-define-kbd "3" "C-3")
+  (modalka-define-kbd "4" "C-4")
+  (modalka-define-kbd "5" "C-5")
+  (modalka-define-kbd "6" "C-6")
+  (modalka-define-kbd "7" "C-7")
+  (modalka-define-kbd "8" "C-8")
+  (modalka-define-kbd "9" "C-9")
+  (modalka-define-kbd "-" "C--")
+
+
+  (define-key modalka-mode-map (kbd "c q") 'rr-transform-to-cloze)
+  (define-key modalka-mode-map (kbd "c t") 'rr-google-translate-en)
+  (define-key modalka-mode-map (kbd "c g") 'rr-google-translate)
+  (define-key modalka-mode-map (kbd "c y") 'rr-deepl-translate)
+  (define-key modalka-mode-map (kbd "r d") 'rr-counsel-depl-lookup-word)
+  (define-key modalka-mode-map (kbd "c d") 'rr-counsel-depl-lookup-word)
+  (define-key modalka-mode-map (kbd "c f") 'rr-cousel-depl-lookup-word-put-subheading)
+  (define-key modalka-mode-map (kbd "c r") 'rr-counsel-reverso-lookup-word))
+
+
+;;(define-key org-mode-map "mouse-3" 'rr-transform-to-cloze)
+(define-key org-mode-map [mouse-3] (lambda (event) (interactive "e") (mouse-set-point event) (rr-transform-to-cloze nil)))
+(define-key org-mode-map [S-mouse-3] (lambda (event) (interactive "e") (mouse-set-point event) (rr-transform-to-cloze '(4))))
+
+(scroll-bar-mode 0)
+
+
+;; (require 'dabbrev)
+;; (defun dabbrev-complation-at-point ()
+;;   (dabbrev--reset-global-variables)
+;;   (let* ((abbrev (dabbrev--abbrev-at-point))
+;;          (candidates (dabbrev--find-all-expansions abbrev t))
+;;          (bnd (bounds-of-thing-at-point 'symbol)))
+;;     (list (car bnd) (cdr bnd) candidates)))
+;; (add-to-list 'completion-at-point-functions 'dabbrev-complation-at-point)
+
+
+(define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
+
+;;(global-set-key (kbd "C-r") 'isearch-backward)
+(add-hook 'vhdl-mode-hook (lambda () (local-set-key (kbd "M-h C-i") 'counsuel-imenu-rr)))
+
+
+
+(global-set-key (kbd "S-SPC") (lambda () (interactive)
+			      (setq last-command-event ?_)
+			      (self-insert-command 1)))
+
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
